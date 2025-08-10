@@ -172,6 +172,14 @@
             button.classList.toggle('liked');
         }
 
+        function scrollToNextVideo(button) {
+            const currentVideoContainer = button.closest('.video-container');
+            const nextVideoContainer = currentVideoContainer.nextElementSibling;
+            if (nextVideoContainer) {
+                nextVideoContainer.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
         const createVideoElement = (videoData) => {
             const container = document.createElement('div');
             container.className = 'video-container';
@@ -196,6 +204,14 @@
                             </button>
                         </div>
                     </div>
+                </div>
+                <!-- Botón para hacer scroll hacia abajo -->
+                <div class="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 overlay-content">
+                    <button class="action-button scroll-down-btn animate-bounce" onclick="scrollToNextVideo(this)">
+                        <svg class="w-8 h-8 text-white opacity-75" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
                 </div>
             `;
             
