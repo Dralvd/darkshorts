@@ -47,6 +47,7 @@
             justify-content: center;
             align-items: center;
             background-color: #000;
+            animation: fadeIn 0.5s ease-in-out;
         }
         .video-iframe-container {
             width: 100%;
@@ -59,8 +60,11 @@
             border: none;
         }
         .overlay-gradient {
-            background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 30%, rgba(0,0,0,0) 50%);
+            background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 30%, rgba(0,0,0,0) 60%);
             pointer-events: none;
+        }
+        .overlay-content {
+             pointer-events: auto;
         }
         #loading-spinner {
             border: 4px solid rgba(255, 255, 255, 0.3);
@@ -69,6 +73,23 @@
             width: 50px;
             height: 50px;
             animation: spin 1s linear infinite;
+        }
+        .action-button {
+            transition: transform 0.2s ease-in-out;
+        }
+        .action-button:hover {
+            transform: scale(1.1);
+        }
+        .description-text {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;  
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
@@ -112,7 +133,25 @@
                         <iframe src="${iframeSrc}" allow="autoplay; encrypted-media" allowfullscreen></iframe>
                     </div>
                     <div class="absolute inset-0 flex flex-col justify-end p-4 overlay-gradient">
-                        <p class="text-sm font-semibold">${videoData.title}</p>
+                        <div class="flex items-end overlay-content">
+                            <!-- Columna de información del video -->
+                            <div class="flex-grow">
+                                <h3 class="font-bold text-lg">${videoData.title}</h3>
+                                <p class="text-sm mt-1 description-text">${videoData.description || 'Sin descripción.'}</p>
+                            </div>
+                            <!-- Columna de botones de acción -->
+                            <div class="flex flex-col items-center space-y-6 ml-4">
+                                <button class="action-button text-center">
+                                    <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"></path></svg>
+                                </button>
+                                <button class="action-button text-center">
+                                    <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.02-3.06A8.009 8.009 0 012 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM4.416 14.616l.043.028a6.023 6.023 0 003.499 1.022 6 6 0 10-5.9-7.965 5.986 5.986 0 001.32 3.699l.028.043-1.002 3.006 3.012-1.002z" clip-rule="evenodd"></path></svg>
+                                </button>
+                                <button class="action-button text-center">
+                                    <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z"></path></svg>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 `;
                 return container;
@@ -146,7 +185,6 @@
                 showLoading();
 
                 try {
-                    // Llamamos a la nueva ruta de la API definida en netlify.toml
                     const response = await fetch('/api/get-random-video');
                     
                     if (!response.ok) {
