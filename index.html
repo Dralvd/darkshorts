@@ -186,7 +186,7 @@
                 <div class="absolute inset-0 flex flex-col justify-end p-4 overlay-gradient">
                     <div class="flex items-end overlay-content">
                         <div class="flex-grow">
-                            <h3 class="font-bold text-lg">${videoData.title}</h3>
+                            <!-- Título eliminado -->
                             <p class="text-sm mt-1 description-text">${videoData.description || 'Sin descripción.'}</p>
                         </div>
                         <div class="flex flex-col items-center space-y-6 ml-4">
@@ -197,9 +197,7 @@
                                 <!-- Icono Liked (Oculto por defecto) -->
                                 <svg class="w-8 h-8 liked-icon hidden" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"></path></svg>
                             </button>
-                            <button class="action-button text-center">
-                                <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.02-3.06A8.009 8.009 0 012 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM4.416 14.616l.043.028a6.023 6.023 0 003.499 1.022 6 6 0 10-5.9-7.965 5.986 5.986 0 001.32 3.699l.028.043-1.002 3.006 3.012-1.002z" clip-rule="evenodd"></path></svg>
-                            </button>
+                            <!-- Icono de comentarios eliminado -->
                             <!-- Botón de Sonido -->
                             <button class="action-button text-center" onclick="toggleSound('${playerId}')" data-player-id="${playerId}">
                                 <!-- Icono Muted (Visible por defecto) -->
