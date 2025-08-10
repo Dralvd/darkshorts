@@ -1,0 +1,15 @@
+# netlify.toml
+
+# Configuración de compilación
+[build]
+  # Directorio donde están tus funciones de servidor
+  functions = "netlify/functions"
+
+# Reglas de redirección para la API
+[[redirects]]
+  # La URL que usarás en tu frontend
+  from = "/api/*"
+  # La ubicación real de la función en Netlify
+  to = "/.netlify/functions/:splat"
+  # Código de estado HTTP (200 = OK)
+  status = 200

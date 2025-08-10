@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interfaz Vertical para Videos de YouTube</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a1a1a;
+            color: #fff;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .phone-container {
+            width: 100%;
+            height: 100%;
+            max-width: 420px;
+            max-height: 85vh;
+            border-radius: 24px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+            border: 2px solid #333;
+            background-color: #000;
+        }
+        #video-feed {
+            height: 100%;
+            width: 100%;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        #video-feed::-webkit-scrollbar { display: none; }
+        .video-container {
+            height: 100%;
+            width: 100%;
+            scroll-snap-align: start;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #000;
+        }
+        .video-iframe-container {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        .video-iframe-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        .overlay-gradient {
+            background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 30%, rgba(0,0,0,0) 50%);
+            pointer-events: none;
+        }
+        #loading-spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid #fff;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @media (max-width: 480px) {
+            .phone-container {
+                max-width: 100%;
+                max-height: 100%;
+                border-radius: 0;
+                border: none;
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="phone-container">
+        <main id="video-feed">
+            <!-- Los videos se insertarán aquí dinámicamente -->
+        </main>
+        <!-- Contenedor para mostrar errores -->
+        <div id="error-message" class="hidden absolute inset-0 flex flex-col justify-center items-center p-4 text-center bg-black bg-opacity-80">
+            <h2 class="text-lg font-bold text-red-500">¡Ups! Algo salió mal.</h2>
+            <p class="text-sm text-gray-300 mt-2" id="error-details"></p>
+            <button onclick="location.reload()" class="mt-4 bg-white text-black font-bold py-2 px-4 rounded">Reintentar</button>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const videoFeed = document.getElementById('video-feed');
+            let isLoading = false;
+
+            const createVideoElement = (videoData) => {
+                const container = document.createElement('div');
+                container.className = 'video-container';
+                const iframeSrc = `https://www.youtube.com/embed/${videoData.videoId}?autoplay=1&mute=1&loop=1&playlist=${videoData.videoId}&controls=0&showinfo=0&modestbranding=1`;
+                
+                container.innerHTML = `
+                    <div class="video-iframe-container">
+                        <iframe src="${iframeSrc}" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+                    </div>
+                    <div class="absolute inset-0 flex flex-col justify-end p-4 overlay-gradient">
+                        <p class="text-sm font-semibold">${videoData.title}</p>
+                    </div>
+                `;
+                return container;
+            };
+
+            const showLoading = () => {
+                const loadingContainer = document.createElement('div');
+                loadingContainer.className = 'video-container';
+                loadingContainer.id = 'loading-container';
+                loadingContainer.innerHTML = `<div id="loading-spinner"></div>`;
+                videoFeed.appendChild(loadingContainer);
+            };
+
+            const hideLoading = () => {
+                const loadingContainer = document.getElementById('loading-container');
+                if (loadingContainer) {
+                    loadingContainer.remove();
+                }
+            };
+
+            const showError = (message) => {
+                const errorMessageContainer = document.getElementById('error-message');
+                const errorDetails = document.getElementById('error-details');
+                errorDetails.textContent = message;
+                errorMessageContainer.classList.remove('hidden');
+            };
+
+            const loadNextVideo = async () => {
+                if (isLoading) return;
+                isLoading = true;
+                showLoading();
+
+                try {
+                    // Llamamos a la nueva ruta de la API definida en netlify.toml
+                    const response = await fetch('/api/get-random-video');
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || `Error del servidor: ${response.statusText}`);
+                    }
+                    
+                    const videoData = await response.json();
+                    if (videoData.error) {
+                        throw new Error(videoData.error);
+                    }
+
+                    const videoElement = createVideoElement(videoData);
+                    
+                    hideLoading();
+                    videoFeed.appendChild(videoElement);
+
+                } catch (error) {
+                    console.error("No se pudo cargar el video:", error);
+                    hideLoading();
+                    showError(`No se pudo conectar con el servidor. Revisa los registros de la función en Netlify. (${error.message})`);
+                } finally {
+                    isLoading = false;
+                }
+            };
+
+            videoFeed.addEventListener('scroll', () => {
+                const { scrollTop, scrollHeight, clientHeight } = videoFeed;
+                if (scrollTop + clientHeight >= scrollHeight - 5) {
+                    loadNextVideo();
+                }
+            });
+
+            loadNextVideo();
+        });
+    </script>
+</body>
+</html>
