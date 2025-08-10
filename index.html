@@ -142,6 +142,21 @@
         let isLoading = false;
         const videoFeed = document.getElementById('video-feed');
 
+        // --- Intersection Observer para controlar la reproducción ---
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                const playerId = entry.target.dataset.playerId;
+                const player = players[playerId];
+                if (!player || typeof player.playVideo !== 'function') return;
+
+                if (entry.isIntersecting) {
+                    player.playVideo();
+                } else {
+                    player.pauseVideo();
+                }
+            });
+        }, { threshold: 0.8 }); // El 80% del video debe estar visible para reproducirse
+
         // Esta función DEBE ser global para que la API de YouTube pueda llamarla.
         function onYouTubeIframeAPIReady() {
             loadNextVideo();
@@ -173,21 +188,13 @@
         }
 
         async function scrollToNextVideo(button) {
-            // Previene que la función se ejecute si ya se está cargando un video
             if (isLoading) return;
-
             const currentVideoContainer = button.closest('.video-container');
             let nextVideoContainer = currentVideoContainer.nextElementSibling;
-
-            // Si no hay un siguiente video, significa que estamos al final del feed.
-            // Necesitamos cargar uno nuevo.
             if (!nextVideoContainer) {
                 await loadNextVideo();
-                // Después de que el nuevo video se carga y se añade al DOM, lo encontramos.
                 nextVideoContainer = currentVideoContainer.nextElementSibling;
             }
-            
-            // Si existe un contenedor de video siguiente (ya sea originalmente o después de cargarlo), nos desplazamos a él.
             if (nextVideoContainer) {
                 nextVideoContainer.scrollIntoView({ behavior: 'smooth' });
             }
@@ -197,6 +204,7 @@
             const container = document.createElement('div');
             container.className = 'video-container';
             const playerId = `player-${videoData.videoId}-${Date.now()}`;
+            container.dataset.playerId = playerId; // Guardamos el ID para el observer
             
             container.innerHTML = `
                 <div id="${playerId}" class="video-iframe-container"></div>
@@ -242,6 +250,12 @@
                     controls: 0,
                     showinfo: 0,
                     modestbranding: 1
+                },
+                events: {
+                    'onReady': (event) => {
+                        // Una vez que el reproductor está listo, empezamos a observarlo.
+                        observer.observe(container);
+                    }
                 }
             });
         };
