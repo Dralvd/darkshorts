@@ -172,9 +172,22 @@
             button.classList.toggle('liked');
         }
 
-        function scrollToNextVideo(button) {
+        async function scrollToNextVideo(button) {
+            // Previene que la función se ejecute si ya se está cargando un video
+            if (isLoading) return;
+
             const currentVideoContainer = button.closest('.video-container');
-            const nextVideoContainer = currentVideoContainer.nextElementSibling;
+            let nextVideoContainer = currentVideoContainer.nextElementSibling;
+
+            // Si no hay un siguiente video, significa que estamos al final del feed.
+            // Necesitamos cargar uno nuevo.
+            if (!nextVideoContainer) {
+                await loadNextVideo();
+                // Después de que el nuevo video se carga y se añade al DOM, lo encontramos.
+                nextVideoContainer = currentVideoContainer.nextElementSibling;
+            }
+            
+            // Si existe un contenedor de video siguiente (ya sea originalmente o después de cargarlo), nos desplazamos a él.
             if (nextVideoContainer) {
                 nextVideoContainer.scrollIntoView({ behavior: 'smooth' });
             }
