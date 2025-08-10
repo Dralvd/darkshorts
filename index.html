@@ -47,6 +47,7 @@
             justify-content: center;
             align-items: center;
             background-color: #000;
+            animation: fadeIn 0.5s ease-in-out;
         }
         .video-iframe-container {
             width: 100%;
@@ -58,9 +59,22 @@
             height: 100%;
             border: none;
         }
+        .scroll-handler-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
         .overlay-gradient {
-            background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 30%, rgba(0,0,0,0) 50%);
+            background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 30%, rgba(0,0,0,0) 60%);
             pointer-events: none;
+            z-index: 2;
+        }
+        .overlay-content {
+             pointer-events: auto;
+             z-index: 3;
         }
         #loading-spinner {
             border: 4px solid rgba(255, 255, 255, 0.3);
@@ -69,6 +83,26 @@
             width: 50px;
             height: 50px;
             animation: spin 1s linear infinite;
+        }
+        .action-button {
+            transition: transform 0.2s ease-in-out;
+        }
+        .action-button:hover {
+            transform: scale(1.1);
+        }
+        .liked {
+            color: #ef4444; /* Rojo de Tailwind (red-500) */
+        }
+        .description-text {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;  
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
@@ -97,90 +131,161 @@
             <button onclick="location.reload()" class="mt-4 bg-white text-black font-bold py-2 px-4 rounded">Reintentar</button>
         </div>
     </div>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const videoFeed = document.getElementById('video-feed');
-            let isLoading = false;
 
-            const createVideoElement = (videoData) => {
-                const container = document.createElement('div');
-                container.className = 'video-container';
-                const iframeSrc = `https://www.youtube.com/embed/${videoData.videoId}?autoplay=1&mute=1&loop=1&playlist=${videoData.videoId}&controls=0&showinfo=0&modestbranding=1`;
-                
-                container.innerHTML = `
-                    <div class="video-iframe-container">
-                        <iframe src="${iframeSrc}" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-                    </div>
-                    <div class="absolute inset-0 flex flex-col justify-end p-4 overlay-gradient">
-                        <p class="text-sm font-semibold">${videoData.title}</p>
+    <!-- Carga de la API de Iframe de YouTube -->
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <script>
+        // Objeto global para almacenar las instancias de los reproductores de YouTube
+        let players = {};
+        let isLoading = false;
+        const videoFeed = document.getElementById('video-feed');
+
+        // Esta función se llama automáticamente cuando la API de YouTube está lista
+        function onYouTubeIframeAPIReady() {
+            loadNextVideo();
+        }
+
+        // Función para alternar el sonido
+        function toggleSound(playerId) {
+            const player = players[playerId];
+            if (!player) return;
+
+            const button = document.querySelector(`[data-player-id="${playerId}"]`);
+            const mutedIcon = button.querySelector('.muted-icon');
+            const unmutedIcon = button.querySelector('.unmuted-icon');
+
+            if (player.isMuted()) {
+                player.unMute();
+                mutedIcon.classList.add('hidden');
+                unmutedIcon.classList.remove('hidden');
+            } else {
+                player.mute();
+                mutedIcon.classList.remove('hidden');
+                unmutedIcon.classList.add('hidden');
+            }
+        }
+
+        // Función para alternar el 'me gusta'
+        function toggleLike(button) {
+            const unlikedIcon = button.querySelector('.unliked-icon');
+            const likedIcon = button.querySelector('.liked-icon');
+            
+            unlikedIcon.classList.toggle('hidden');
+            likedIcon.classList.toggle('hidden');
+            button.classList.toggle('liked');
+        }
+
+        const createVideoElement = (videoData) => {
+            const container = document.createElement('div');
+            container.className = 'video-container';
+            const playerId = `player-${videoData.videoId}-${Date.now()}`; // ID único para el reproductor
+            
+            container.innerHTML = `
+                <div id="${playerId}" class="video-iframe-container"></div>
+                <div class="scroll-handler-overlay"></div>
+                <div class="absolute inset-0 flex flex-col justify-end p-4 overlay-gradient">
+                    <div class="flex items-end overlay-content">
+                        <div class="flex-grow">
+                            <h3 class="font-bold text-lg">${videoData.title}</h3>
+                            <p class="text-sm mt-1 description-text">${videoData.description || 'Sin descripción.'}</p>
+                        </div>
+                        <div class="flex flex-col items-center space-y-6 ml-4">
+                            <!-- Botón de Me Gusta -->
+                            <button class="action-button text-center" onclick="toggleLike(this)">
+                                <!-- Icono Unliked (Visible por defecto) -->
+                                <svg class="w-8 h-8 unliked-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.5l1.318-1.182a4.5 4.5 0 116.364 6.364L12 20.25l-7.682-7.682a4.5 4.5 0 010-6.364z"></path></svg>
+                                <!-- Icono Liked (Oculto por defecto) -->
+                                <svg class="w-8 h-8 liked-icon hidden" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"></path></svg>
+                            </button>
+                            <button class="action-button text-center">
+                                <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.02-3.06A8.009 8.009 0 012 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM4.416 14.616l.043.028a6.023 6.023 0 003.499 1.022 6 6 0 10-5.9-7.965 5.986 5.986 0 001.32 3.699l.028.043-1.002 3.006 3.012-1.002z" clip-rule="evenodd"></path></svg>
+                            </button>
+                            <!-- Botón de Sonido -->
+                            <button class="action-button text-center" onclick="toggleSound('${playerId}')" data-player-id="${playerId}">
+                                <!-- Icono Muted (Visible por defecto) -->
+                                <svg class="w-8 h-8 muted-icon" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM12.293 7.293a1 1 0 011.414 0L15 8.586l1.293-1.293a1 1 0 111.414 1.414L16.414 10l1.293 1.293a1 1 0 01-1.414 1.414L15 11.414l-1.293 1.293a1 1 0 01-1.414-1.414L13.586 10l-1.293-1.293a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                                <!-- Icono Unmuted (Oculto por defecto) -->
+                                <svg class="w-8 h-8 unmuted-icon hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M10 3.054a1 1 0 01.707.293l3.536 3.536a1 1 0 010 1.414A5 5 0 0112 13H4.586l-1.293 1.293a1 1 0 01-1.414-1.414l10-10a1 1 0 011.121-.168zM15 13a1 1 0 011-1h.586l-1.293-1.293a1 1 0 011.414-1.414l3 3a1 1 0 010 1.414l-3 3a1 1 0 01-1.414-1.414L15.586 13H15zM4.586 7H2a1 1 0 00-1 1v4a1 1 0 001 1h2.586l3.707 3.707a1 1 0 001.414 0V4.764L4.586 7z"></path></svg>
+                            </button>
+                        </div>
                     </div>
                 `;
-                return container;
-            };
+            
+            // Adjuntar el contenedor al DOM ANTES de crear el reproductor
+            videoFeed.appendChild(container);
 
-            const showLoading = () => {
-                const loadingContainer = document.createElement('div');
-                loadingContainer.className = 'video-container';
-                loadingContainer.id = 'loading-container';
-                loadingContainer.innerHTML = `<div id="loading-spinner"></div>`;
-                videoFeed.appendChild(loadingContainer);
-            };
-
-            const hideLoading = () => {
-                const loadingContainer = document.getElementById('loading-container');
-                if (loadingContainer) {
-                    loadingContainer.remove();
-                }
-            };
-
-            const showError = (message) => {
-                const errorMessageContainer = document.getElementById('error-message');
-                const errorDetails = document.getElementById('error-details');
-                errorDetails.textContent = message;
-                errorMessageContainer.classList.remove('hidden');
-            };
-
-            const loadNextVideo = async () => {
-                if (isLoading) return;
-                isLoading = true;
-                showLoading();
-
-                try {
-                    // Llamamos a la nueva ruta de la API definida en netlify.toml
-                    const response = await fetch('/api/get-random-video');
-                    
-                    if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(errorData.error || `Error del servidor: ${response.statusText}`);
-                    }
-                    
-                    const videoData = await response.json();
-                    if (videoData.error) {
-                        throw new Error(videoData.error);
-                    }
-
-                    const videoElement = createVideoElement(videoData);
-                    
-                    hideLoading();
-                    videoFeed.appendChild(videoElement);
-
-                } catch (error) {
-                    console.error("No se pudo cargar el video:", error);
-                    hideLoading();
-                    showError(`No se pudo conectar con el servidor. Revisa los registros de la función en Netlify. (${error.message})`);
-                } finally {
-                    isLoading = false;
-                }
-            };
-
-            videoFeed.addEventListener('scroll', () => {
-                const { scrollTop, scrollHeight, clientHeight } = videoFeed;
-                if (scrollTop + clientHeight >= scrollHeight - 5) {
-                    loadNextVideo();
+            // Crear el reproductor de YouTube para el nuevo iframe
+            players[playerId] = new YT.Player(playerId, {
+                height: '100%',
+                width: '100%',
+                videoId: videoData.videoId,
+                playerVars: {
+                    autoplay: 1,
+                    mute: 1,
+                    loop: 1,
+                    playlist: videoData.videoId, // Necesario para que el loop funcione
+                    controls: 0,
+                    showinfo: 0,
+                    modestbranding: 1
                 }
             });
+        };
 
-            loadNextVideo();
+        const showLoading = () => {
+            const loadingContainer = document.createElement('div');
+            loadingContainer.className = 'video-container';
+            loadingContainer.id = 'loading-container';
+            loadingContainer.innerHTML = `<div id="loading-spinner"></div>`;
+            videoFeed.appendChild(loadingContainer);
+        };
+
+        const hideLoading = () => {
+            const loadingContainer = document.getElementById('loading-container');
+            if (loadingContainer) {
+                loadingContainer.remove();
+            }
+        };
+
+        const showError = (message) => {
+            const errorMessageContainer = document.getElementById('error-message');
+            const errorDetails = document.getElementById('error-details');
+            errorDetails.textContent = message;
+            errorMessageContainer.classList.remove('hidden');
+        };
+
+        const loadNextVideo = async () => {
+            if (isLoading) return;
+            isLoading = true;
+            showLoading();
+
+            try {
+                const response = await fetch('/api/get-random-video');
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `Error del servidor: ${response.statusText}`);
+                }
+                const videoData = await response.json();
+                if (videoData.error) {
+                    throw new Error(videoData.error);
+                }
+                
+                hideLoading();
+                createVideoElement(videoData);
+
+            } catch (error) {
+                console.error("No se pudo cargar el video:", error);
+                hideLoading();
+                showError(`No se pudo conectar con el servidor. Revisa los registros de la función en Netlify. (${error.message})`);
+            } finally {
+                isLoading = false;
+            }
+        };
+
+        videoFeed.addEventListener('scroll', () => {
+            const { scrollTop, scrollHeight, clientHeight } = videoFeed;
+            if (scrollTop + clientHeight >= scrollHeight - 5) {
+                loadNextVideo();
+            }
         });
     </script>
 </body>
