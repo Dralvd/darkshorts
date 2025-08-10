@@ -135,12 +135,13 @@
     <!-- Carga de la API de Iframe de YouTube -->
     <script src="https://www.youtube.com/iframe_api"></script>
     <script>
-        // Objeto global para almacenar las instancias de los reproductores de YouTube
+        // --- Variables y funciones globales ---
         let players = {};
         let isLoading = false;
         const videoFeed = document.getElementById('video-feed');
 
         // Esta función se llama automáticamente cuando la API de YouTube está lista
+        // Es el punto de entrada de nuestra aplicación.
         function onYouTubeIframeAPIReady() {
             loadNextVideo();
         }
@@ -207,12 +208,11 @@
                             </button>
                         </div>
                     </div>
-                `;
+                </div>
+            `;
             
-            // Adjuntar el contenedor al DOM ANTES de crear el reproductor
             videoFeed.appendChild(container);
 
-            // Crear el reproductor de YouTube para el nuevo iframe
             players[playerId] = new YT.Player(playerId, {
                 height: '100%',
                 width: '100%',
@@ -221,7 +221,7 @@
                     autoplay: 1,
                     mute: 1,
                     loop: 1,
-                    playlist: videoData.videoId, // Necesario para que el loop funcione
+                    playlist: videoData.videoId,
                     controls: 0,
                     showinfo: 0,
                     modestbranding: 1
@@ -279,6 +279,7 @@
             }
         };
 
+        // --- Event Listeners ---
         videoFeed.addEventListener('scroll', () => {
             const { scrollTop, scrollHeight, clientHeight } = videoFeed;
             if (scrollTop + clientHeight >= scrollHeight - 5) {
